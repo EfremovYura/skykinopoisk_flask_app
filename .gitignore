@@ -1,0 +1,9 @@
+/.idea
+dao/__pycache__
+helpers/__pycache__
+views/__pycache__
+.DS_Store
+.pytest_cache
+/tests/service/.pytest_cache
+__pycache__
+/venv
