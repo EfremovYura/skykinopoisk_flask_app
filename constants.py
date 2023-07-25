@@ -5,3 +5,5 @@ JWT_SECRET = 's3cR$eT'
 JWT_ALGO = 'HS256'
 
 ITEMS_PER_PAGE = 12
+
+# TODO: скрыть секреты

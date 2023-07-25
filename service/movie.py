@@ -1,55 +1,33 @@
 from dao.model.movie import MovieSchema
+from service.base_service import BaseService
 
 
-movie_schema = MovieSchema()
-movies_schema = MovieSchema(many=True)
+class MovieService(BaseService):
+    dao_object_schema = MovieSchema()
+    dao_objects_schema = MovieSchema(many=True)
 
-
-class MovieService:
-    def __init__(self, movie_dao):
-        self.movie_dao = movie_dao
-
-    def get_all(self, args):
-        """Возвращает все фильмы.
-        Фильтрует результаты средствами sql, если были заданы фильтры.
-        Для тех эндпоинтов, которые возвращают несколько записей, нужно организовать пагинацию через URL-параметр page,
-        а на страницу будет возвращать по 12 записей.
-        Параметр page - необязательный, а значит, если он не указан - нужно вернуть все записи.
-
-        Так как мы хотим получать Новинки, для эндпонта GET /movies/ нужно еще добавить необязательный параметр status.
-        Если он присутствует и имеет значение new — возвращаем записи в отсортированном виде (самые свежие),
-        иначе возвращаем в том порядке, в котором они лежат в базе.
+    def get_all(self, args: dict) -> list[dict] | None:
+        """Возвращает все фильмы. Выполняет фильтрацию, пагинацию, сортировку.
         """
 
         # Все фильмы без фильтрации по порядку
         if not args:
-            movies = self.movie_dao.get_all()
-            return movies_schema.dump(movies)
-
+            movies = self.dao.get_all()
+            return self.dao_objects_schema.dump(movies)
 
         status = args.pop("status", None)
         page = args.pop("page", None)
 
+        arg_data = {
+            "status": status,
+            "page": page,
+        }
+
         if not args:
+            return super().get_all(arg_data)
 
-            if status == "new" and page is not None:
-                # Все фильмы без фильтрации в обратном порядке по странично
-                movies = self.movie_dao.get_all_new_page(int(page))
-            elif page is not None:
-                # Все фильмы без фильтрации по порядку по странично
-                movies = self.movie_dao.get_all_page(int(page))
-            elif status == "new":
-                # Все фильмы без фильтрации в обратном порядке
-                movies = self.movie_dao.get_all_new()
-            else:
-                # Все фильмы без фильтрации по порядку
-                movies = self.movie_dao.get_all()
-
-            return movies_schema.dump(movies)
-
-
+        # Фильтрация
         allowed_filter_list = ["director_id", "genre_id", "year"]
-
         filter_list = []
 
         for arg in args:
@@ -58,40 +36,28 @@ class MovieService:
             else:
                 return None
 
-        filter = ' AND '.join(filter_list)
+        user_filter = ' AND '.join(filter_list)
 
         if status == "new" and page is not None:
             # Отфильтрованные фильмы в обратном порядке по странично
-            movies = self.movie_dao.get_filtered_new_page(filter, int(page))
+            movies = self.dao.get_filtered_new_page(user_filter, int(page))
         elif page is not None:
             # Отфильтрованные фильмы по порядку по странично
-            movies = self.movie_dao.get_filtered_page(filter, int(page))
+            movies = self.dao.get_filtered_page(user_filter, int(page))
         elif status == "new":
             # Отфильтрованные фильмы в обратном порядке
-            movies = self.movie_dao.get_filtered_new(filter)
+            movies = self.dao.get_filtered_new(user_filter)
         else:
             # Отфильтрованные фильмы по порядку
-            movies = self.movie_dao.get_filtered(filter)
+            movies = self.dao.get_filtered(user_filter)
 
-        return movies_schema.dump(movies)
+        return self.dao_objects_schema.dump(movies)
 
-    def create(self, data):
-        """Добавляет фильм"""
-        movie = self.movie_dao.create(data)
-
-        return movie_schema.dump(movie)
-
-    def get_one(self, mid):
-        """Возвращает 1 фильм по id"""
-        movie = self.movie_dao.get_one(mid)
-
-        return movie_schema.dump(movie)
-
-    def update(self, data):
-        """Обновляет фильм по id и всем полям таблицы"""
+    def update(self, data: dict) -> dict | None:
+        """Обновляет фильм по id и всем полям таблицы."""
         mid = data.get('id')
 
-        movie = self.movie_dao.get_one(mid)
+        movie = self.dao.get_one(mid)
 
         if not movie:
             return None
@@ -104,15 +70,4 @@ class MovieService:
         movie.genre_id = data.get("genre_id")
         movie.director_id = data.get("director_id")
 
-        return movie_schema.dump(self.movie_dao.update_info(movie))
-
-    def delete(self, mid):
-        """Удаляет фильм по id"""
-        movie = self.movie_dao.get_one(mid)
-
-        if not movie:
-            return None
-
-        self.movie_dao.delete(movie)
-
-        return movie_schema.dump(movie)
+        return self.dao_object_schema.dump(self.dao.update(movie))
