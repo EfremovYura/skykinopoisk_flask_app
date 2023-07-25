@@ -4,22 +4,20 @@ import hmac
 
 from dao.model.user import UserSchema
 from constants import PWD_HASH_SALT, PWD_HASH_ITERATIONS
-
-user_schema = UserSchema()
-users_schema = UserSchema(many=True)
+from service.base_service import BaseService
 
 
-class UserService:
-    def __init__(self, user_dao):
-        self.user_dao = user_dao
+class UserService(BaseService):
+    dao_object_schema = UserSchema()
+    dao_objects_schema = UserSchema(many=True)
 
-    def get_all(self, args):
+    def get_all(self, args: dict) -> list[dict] | None:
         """Возвращает всех пользователей.
         Фильтрует результаты средствами sql, если были заданы фильтры.
         """
         if not args:
-            users = self.user_dao.get_all()
-            return users_schema.dump(users)
+            users = self.dao.get_all()
+            return self.dao_objects_schema.dump(users)
 
         allowed_filter_list = ["role"]
 
@@ -33,51 +31,49 @@ class UserService:
 
         text_filter = ' AND '.join(filter_list)
 
-        users = users_schema.dump(self.user_dao.get_filtered(text_filter))
+        return self.dao_objects_schema.dump(self.dao.get_filtered(text_filter))
 
-        return users
-
-    def create(self, data):
+    def create(self, data: dict) -> dict:
         """Добавляет пользователя"""
-        user = self.user_dao.create(data)
+        user = self.dao.create(data)
 
-        return user_schema.dump(user)
+        return self.dao_object_schema.dump(user)
 
-    def get_one(self, uid):
+    def get_one(self, uid: int) -> dict:
         """Возвращает 1 пользователя по id"""
-        user = self.user_dao.get_one(uid)
+        user = self.dao.get_one(uid)
 
-        return user_schema.dump(user)
+        return self.dao_object_schema.dump(user)
 
-    def get_by_email(self, email):
-        user = self.user_dao.get_by_email(email)
+    def get_by_email(self, email: str) -> dict:
+        user = self.dao.get_by_email(email)
 
-        return user_schema.dump(user)
+        return self.dao_object_schema.dump(user)
 
-    def update_info(self, data):
+    def update_info(self, data: dict) -> dict | None:
         """Обновляет информацию пользователя """
 
-        user = self.user_dao.get_by_email(data.get("email"))
+        user = self.dao.get_by_email(data.get("email"))
 
         user.name = data.get("name") or user.name
         user.surname = data.get("surname") or user.surname
         user.favorite_genre = data.get("favorite_genre") or user.favorite_genre
 
-        user = self.user_dao.update(user)
+        user = self.dao.update(user)
 
         if not user:
             return None
 
-        return user_schema.dump(user)
+        return self.dao_object_schema.dump(user)
 
-    def update_password(self, data):
+    def update_password(self, data: dict) -> dict | None:
         """Обновляет пароль пользователя """
 
         email = data.get("email")
         old_password = data.get("password_1")
         new_password = data.get("password_2")
 
-        user = self.user_dao.get_by_email(email)
+        user = self.dao.get_by_email(email)
 
         if self.compare_passwords(user.password, old_password):
             new_password_hash = self.get_hash(new_password)
@@ -85,37 +81,39 @@ class UserService:
         else:
             raise Exception()
 
-        user = self.user_dao.update(user)
+        user = self.dao.update(user)
 
         if not user:
             return None
 
-        return user_schema.dump(user)
+        return self.dao_object_schema.dump(user)
 
-    def delete(self, uid):
+    def delete(self, uid: int) -> dict | None:
         """Удаляет пользователя по id"""
-        user = self.user_dao.get_one(uid)
+        user = self.dao.get_one(uid)
 
         if not user:
             return None
 
-        self.user_dao.delete(user)
+        self.dao.delete(user)
 
-        return user_schema.dump(user)
+        return self.dao_object_schema.dump(user)
 
-    def get_hash(self, password):
+    @staticmethod
+    def get_hash(password: str):
         return base64.b64encode(hashlib.pbkdf2_hmac(
             'sha256',
-            password.encode('utf-8'),  # Convert the password to bytes
+            password.encode('utf-8'),
             PWD_HASH_SALT,
             PWD_HASH_ITERATIONS
         ))
 
-    def compare_passwords(self, password_hash, request_password):
+    @staticmethod
+    def compare_passwords(password_hash, request_password):
         return hmac.compare_digest(
             base64.b64decode(password_hash),
             hashlib.pbkdf2_hmac('sha256',
-                                request_password.encode('utf-8'),  # Convert the password to bytes
+                                request_password.encode('utf-8'),
                                 PWD_HASH_SALT,
                                 PWD_HASH_ITERATIONS
                                 )

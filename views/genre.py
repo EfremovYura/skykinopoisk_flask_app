@@ -34,4 +34,3 @@ class GenreView(Resource):
             return "Не найдено", 404
 
         return genre, 200
-

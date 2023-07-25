@@ -3,7 +3,6 @@ from flask_restx import Resource, Namespace
 from container import director_service
 from deccorators import auth_required
 
-
 directors_ns = Namespace("directors")
 
 

@@ -3,19 +3,16 @@ import datetime
 import jwt
 
 from constants import JWT_ALGO, JWT_SECRET
-from dao.model.user import UserSchema
-
-
-user_schema = UserSchema()
-users_schema = UserSchema(many=True)
+from service.user import UserService
 
 
 class AuthService:
-    def __init__(self, user_service):
+
+    def __init__(self, user_service: UserService):
         self.user_service = user_service
 
-    def check_user_password(self, email, password):
-        user = user_schema.dump(self.user_service.get_by_email(email))
+    def check_user_password(self, email: str, password: str) -> None:
+        user = self.user_service.get_by_email(email)
 
         if not user:
             raise Exception()
@@ -23,9 +20,8 @@ class AuthService:
         if not self.user_service.compare_passwords(user.get("password"), password):
             raise Exception()
 
-        return True
-
-    def generate_tokens(self, email):
+    @staticmethod
+    def generate_tokens(email: str) -> dict:
 
         data = {
             "email": email
@@ -41,12 +37,12 @@ class AuthService:
 
         return {"access_token": access_token, "refresh_token": refresh_token}
 
-    def check_token(self, token):
+    def check_token(self, token: str) -> str:
         data = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
         email = data.get("email")
         exp = data.get("exp")
 
-        user = user_schema.dump(self.user_service.get_by_email(email))
+        user = self.user_service.get_by_email(email)
 
         if not user:
             raise Exception()
@@ -57,7 +53,7 @@ class AuthService:
 
         return email
 
-    def check_tokens(self, access_token, refresh_token):
+    def check_tokens(self, access_token: str, refresh_token: str) -> str:
 
         email_a_token = self.check_token(access_token)
         email_r_token = self.check_token(refresh_token)

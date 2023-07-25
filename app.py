@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask
 from flask_restx import Api
 
 from config import Config
@@ -12,7 +12,7 @@ from views.auth import auth_ns
 
 
 def create_app(config_object):
-    # функция создания основного объекта app
+    # Создать основной объект app
     application = Flask(__name__)
     application.config.from_object(config_object)
     register_extensions(application)
@@ -20,7 +20,7 @@ def create_app(config_object):
 
 
 def register_extensions(application):
-    # функция подключения расширений (Flask-SQLAlchemy, Flask-RESTx, ...)
+    # Подключить расширения (Flask-SQLAlchemy, Flask-RESTx, ...)
     db.init_app(application)
     api = Api(application)
 

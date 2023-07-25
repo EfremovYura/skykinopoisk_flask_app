@@ -2,14 +2,13 @@ from flask import request, abort
 from flask_restx import Resource, Namespace
 from container import user_service, auth_service
 
-
 auth_ns = Namespace("auth")
 
 
 @auth_ns.route("/register")
 class RegisterView(Resource):
-    """Передавая email и пароль, создаем пользователя в системе."""
     def post(self):
+        """Передавая email и пароль, создаем пользователя."""
         req_json = request.json
 
         email = req_json.get("email")
@@ -45,9 +44,7 @@ class RegisterView(Resource):
 class AuthView(Resource):
     def post(self):
         """
-        Передаем email и пароль и, если пользователь прошел аутентификацию,
-        возвращаем пользователю ответ в виде json.
-        """
+        Передаем email и пароль, если пользователь прошел аутентификацию, возвращаем пользователю ответ в виде json."""
 
         req_json = request.json
 
